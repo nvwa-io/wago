@@ -15,6 +15,8 @@ package wago
 
 import "github.com/gin-gonic/gin"
 
-type Context struct {
-	*gin.Context
-}
+const (
+	REQUEST_ID = "W-Request-Id"
+)
+
+type Context = gin.Context

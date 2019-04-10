@@ -186,7 +186,7 @@ func parseFile(f *ast.File) ControllerCommentRouter {
 	for _, d := range f.Decls {
 		switch specDecl := d.(type) {
 		case *ast.FuncDecl:
-			if specDecl.Recv == nil {
+			if specDecl.Recv == nil || specDecl.Doc == nil {
 				continue
 			}
 

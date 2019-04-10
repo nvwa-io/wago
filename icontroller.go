@@ -1,5 +1,3 @@
-package wago
-
 // Copyright 2019 - now The https://github.com/nvwa-io/wago Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +10,8 @@ package wago
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+package wago
 
 import (
 	"github.com/gin-gonic/gin"
@@ -37,7 +37,7 @@ func HandlerWrapper(controllerType reflect.Type, method string) gin.HandlerFunc 
 	return func(c *gin.Context) {
 		ct := reflect.New(controllerType)
 		controller := ct.Interface().(IController)
-		controller.Init(&Context{Context: c})
+		controller.Init(c)
 		m := ct.MethodByName(method)
 
 		m.Call(nil)

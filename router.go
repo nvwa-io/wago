@@ -52,7 +52,7 @@ var (
 )
 
 type (
-	MiddleWareHandler func(c *Context)
+	MiddleWareHandler = gin.HandlerFunc
 	CommentRouter     struct {
 		Method     string
 		Router     string
@@ -89,14 +89,14 @@ func (t *RouterGroup) Controller(controllers ...IController) *RouterGroup {
 
 // bind middleWares
 func (t *RouterGroup) Use(middleWares ...MiddleWareHandler) *RouterGroup {
-	t.middleWares = middleWares
+	t.middleWares = append(t.middleWares, middleWares...)
 	return t
 }
 
 // Config to WagoApp.Server.Group()
 // run while wago app boot
 func (t *RouterGroup) config() {
-	group := WagoApp.Server.Group(t.prefix)
+	group := WagoApp.Server.Group(t.prefix, t.middleWares...)
 	if t.prefix == "" {
 		t.prefix = "/"
 	}
@@ -117,13 +117,6 @@ func (t *RouterGroup) config() {
 		default:
 			t.registerRouterByAuto(c, group)
 		}
-	}
-
-	// use middleWares
-	for _, f := range t.middleWares {
-		group.Use(func(c *gin.Context) {
-			f(&Context{c})
-		})
 	}
 }
 

@@ -13,12 +13,27 @@
 
 package wago
 
+import "github.com/nvwa-io/wago/logger"
+
 type Controller struct {
 	// context of current request
 	Ctx *Context
+
+	// controller logger
+	// init request ID
+	Logger *logger.Entry
 }
 
 // init request context
 func (t *Controller) Init(c *Context) {
 	t.Ctx = c
+
+	t.Logger = logger.WithFields(logger.Fields{
+		REQUEST_ID: c.GetString(REQUEST_ID),
+	})
+}
+
+// get request id from context
+func (t *Controller) RequestId() string {
+	return t.Ctx.GetString(REQUEST_ID)
 }

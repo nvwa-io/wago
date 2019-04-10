@@ -15,9 +15,15 @@ package wago
 
 import (
 	"fmt"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/nvwa-io/wago/logger"
+	"gopkg.in/natefinch/lumberjack.v2"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"time"
 )
 
 var (
@@ -29,9 +35,11 @@ func init() {
 }
 
 func NewWago() *Wago {
-	return &Wago{
+	w := &Wago{
 		Server: gin.New(),
 	}
+
+	return w
 }
 
 type Wago struct {
@@ -46,8 +54,7 @@ func (t *Wago) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	WagoApp.Server.ServeHTTP(w, req)
 }
 
-// Boot Wago app
-func Serve() {
+func config() {
 	// config gin engine running mode.
 	gin.SetMode(AppConfig.App.RunMode)
 
@@ -61,6 +68,50 @@ func Serve() {
 	for _, rg := range WagoApp.routerGroups {
 		rg.config()
 	}
+
+	// config logger
+	logger.SetFormatterByString(AppConfig.Log.Formatter)
+	logger.SetLevelByUint32(AppConfig.Log.Level)
+	logger.SetReportCaller(AppConfig.Log.LogMethodName)
+	if AppConfig.Log.Console {
+		w := io.MultiWriter(
+			os.Stdout,
+			&lumberjack.Logger{
+				Filename:   AppConfig.Log.Filename,
+				MaxSize:    AppConfig.Log.MaxSize,
+				MaxBackups: AppConfig.Log.MaxBackups,
+				MaxAge:     AppConfig.Log.MaxAge,
+				Compress:   AppConfig.Log.Compress,
+			},
+		)
+		logger.SetOutput(w)
+	} else {
+		logger.SetOutput(&lumberjack.Logger{
+			Filename:   AppConfig.Log.Filename,
+			MaxSize:    AppConfig.Log.MaxSize,
+			MaxBackups: AppConfig.Log.MaxBackups,
+			MaxAge:     AppConfig.Log.MaxAge,
+			Compress:   AppConfig.Log.Compress,
+		})
+	}
+
+	// config HTTP Server CORS
+	WagoApp.Server.Use(cors.New(cors.Config{
+		AllowOrigins:     AppConfig.Server.Cors.AllowOrigins,
+		AllowMethods:     AppConfig.Server.Cors.AllowMethods,
+		AllowHeaders:     AppConfig.Server.Cors.AllowHeaders,
+		ExposeHeaders:    AppConfig.Server.Cors.ExposeHeaders,
+		AllowCredentials: AppConfig.Server.Cors.AllowCredentials,
+		AllowOriginFunc:  AppConfig.Server.Cors.AllowOriginFunc,
+		MaxAge:           time.Duration(AppConfig.Server.Cors.MaxAge) * time.Hour,
+	}))
+}
+
+// Boot Wago app
+func Serve() {
+
+	// app configuration
+	config()
 
 	// start gin server
 	server := &http.Server{
@@ -80,11 +131,16 @@ func Serve() {
 // Use attaches a global middleware to the router. ie. the middleware attached though Use() will be
 // included in the handlers chain for every single request. Even 404, 405, static files...
 // For example, this is the right place for a logger or error management middleware.
-func Use(middleware ...gin.HandlerFunc) gin.IRoutes {
+func Use(middleware ...MiddleWareHandler) gin.IRoutes {
 	return WagoApp.Server.Use(middleware...)
 }
 
 // Add router groups
 func AddRouterGroups(rgs ...*RouterGroup) {
 	WagoApp.routerGroups = append(WagoApp.routerGroups, rgs...)
+}
+
+// set CORS AllowOriginFunc
+func AllowOriginFunc(f func(string) bool) {
+	AppConfig.Server.Cors.AllowOriginFunc = f
 }
